@@ -1,4 +1,4 @@
-import type { Game, StandingsRow, Team } from "@/lib/types";
+import type { GameRecord, StandingsRow, Team } from "@/lib/types";
 
 function emptyRow(team: Team): StandingsRow {
   return {
@@ -14,7 +14,7 @@ function emptyRow(team: Team): StandingsRow {
   };
 }
 
-export function calculateStandings(teams: Team[], games: Game[]) {
+export function calculateStandings(teams: Team[], games: GameRecord[]) {
   const rows = new Map<string, StandingsRow>();
 
   for (const team of teams) {
@@ -23,6 +23,8 @@ export function calculateStandings(teams: Team[], games: Game[]) {
 
   for (const game of games) {
     if (game.status !== "final") continue;
+    if ((game.phase ?? "pool") !== "pool") continue;
+    if (!game.home_team_id || !game.away_team_id) continue;
 
     const home = rows.get(game.home_team_id);
     const away = rows.get(game.away_team_id);

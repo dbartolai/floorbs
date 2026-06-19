@@ -11,7 +11,7 @@ async function fetchSupabaseSnapshot() {
   const { data: namedTournament, error: tournamentError } = await supabase
     .from("tournaments")
     .select("*")
-    .eq("name", "Floorbs Cup")
+    .eq("name", "US Nationals Adult Championship")
     .maybeSingle<Tournament>();
 
   if (tournamentError) {

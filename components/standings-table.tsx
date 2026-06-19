@@ -1,6 +1,14 @@
 import type { StandingsRow } from "@/lib/types";
 
-export function StandingsTable({ rows }: { rows: StandingsRow[] }) {
+export function StandingsTable({
+  rows,
+  pool,
+  assignmentsBySeed = {}
+}: {
+  rows: StandingsRow[];
+  pool: string;
+  assignmentsBySeed?: Record<string, string[]>;
+}) {
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <table className="w-full border-collapse text-left text-sm">
@@ -16,11 +24,22 @@ export function StandingsTable({ rows }: { rows: StandingsRow[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {rows.map((row) => (
+          {rows.map((row, index) => {
+            const seed = `${pool.replace(/^Group\s+/i, "")}${index + 1}`;
+            const assignments = assignmentsBySeed[seed] ?? [];
+
+            return (
             <tr key={row.team.id}>
               <td className="px-3 py-3">
-                <div className="font-black text-ink">{row.team.short_name}</div>
+                <div className="font-black text-ink">
+                  {seed} · {row.team.short_name}
+                </div>
                 <div className="text-xs font-semibold text-slate-500">{row.team.name}</div>
+                {assignments.length > 0 ? (
+                  <div className="mt-1 text-xs font-bold text-floorbs">
+                    {assignments.join(", ")}
+                  </div>
+                ) : null}
               </td>
               <td className="px-2 py-3 text-center font-semibold tabular-nums">{row.gamesPlayed}</td>
               <td className="px-2 py-3 text-center font-semibold tabular-nums">{row.wins}</td>
@@ -34,7 +53,8 @@ export function StandingsTable({ rows }: { rows: StandingsRow[] }) {
                 {row.points}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

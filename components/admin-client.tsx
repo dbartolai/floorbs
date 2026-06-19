@@ -14,14 +14,35 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { GameCard } from "@/components/game-card";
 import { formatShortTime } from "@/lib/date-format";
-import type { FeedPostType, Game, GameStatus, TournamentSnapshot } from "@/lib/types";
+import {
+  formatGameReference,
+  getGameParticipantSource,
+  parseSourceOptionValue,
+  seedCodeForPool,
+  sourceOptionValue,
+  teamForSeed
+} from "@/lib/playoff-sources";
+import type {
+  FeedPostType,
+  Game,
+  GameParticipant,
+  GameStatus,
+  ParticipantSource,
+  TournamentSnapshot
+} from "@/lib/types";
 
 type Session = {
   displayName: string;
   role: string;
 };
 
+type SourceOption = {
+  value: string;
+  label: string;
+};
+
 export function AdminClient({ initialSnapshot }: { initialSnapshot: TournamentSnapshot }) {
+  const initialPlayoffGame = initialSnapshot.games.find((game) => game.phase === "playoff");
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [session, setSession] = useState<Session | null>(null);
   const [code, setCode] = useState("");
@@ -30,6 +51,19 @@ export function AdminClient({ initialSnapshot }: { initialSnapshot: TournamentSn
   const [selectedGameId, setSelectedGameId] = useState(
     initialSnapshot.liveGames[0]?.id ?? initialSnapshot.games[0]?.id ?? ""
   );
+  const [selectedPlayoffGameId, setSelectedPlayoffGameId] = useState(
+    initialPlayoffGame?.id ?? ""
+  );
+  const [homeSourceValue, setHomeSourceValue] = useState(
+    initialPlayoffGame
+      ? sourceOptionValue(getGameParticipantSource(initialPlayoffGame, "home"))
+      : "tbd:"
+  );
+  const [awaySourceValue, setAwaySourceValue] = useState(
+    initialPlayoffGame
+      ? sourceOptionValue(getGameParticipantSource(initialPlayoffGame, "away"))
+      : "tbd:"
+  );
   const [feedTitle, setFeedTitle] = useState("");
   const [feedBody, setFeedBody] = useState("");
   const [feedType, setFeedType] = useState<FeedPostType>("announcement");
@@ -37,6 +71,21 @@ export function AdminClient({ initialSnapshot }: { initialSnapshot: TournamentSn
   const selectedGame = useMemo(
     () => snapshot.games.find((game) => game.id === selectedGameId) ?? snapshot.games[0],
     [selectedGameId, snapshot.games]
+  );
+  const playoffGames = useMemo(
+    () => snapshot.games.filter((game) => game.phase === "playoff"),
+    [snapshot.games]
+  );
+  const selectedPlayoffGame = useMemo(
+    () =>
+      playoffGames.find((game) => game.id === selectedPlayoffGameId) ??
+      playoffGames[0] ??
+      null,
+    [playoffGames, selectedPlayoffGameId]
+  );
+  const sourceOptions = useMemo(
+    () => buildSourceOptions(snapshot, selectedPlayoffGame),
+    [snapshot, selectedPlayoffGame]
   );
 
   async function loadSession() {
@@ -55,6 +104,12 @@ export function AdminClient({ initialSnapshot }: { initialSnapshot: TournamentSn
   useEffect(() => {
     loadSession();
   }, []);
+
+  useEffect(() => {
+    if (!selectedPlayoffGame) return;
+    setHomeSourceValue(sourceOptionValue(getGameParticipantSource(selectedPlayoffGame, "home")));
+    setAwaySourceValue(sourceOptionValue(getGameParticipantSource(selectedPlayoffGame, "away")));
+  }, [selectedPlayoffGame]);
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
@@ -104,6 +159,32 @@ export function AdminClient({ initialSnapshot }: { initialSnapshot: TournamentSn
 
     if (!response.ok) {
       setError("Could not update game.");
+      return;
+    }
+
+    await refreshSnapshot();
+  }
+
+  async function savePlayoffSlot(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedPlayoffGame) return;
+
+    setBusy(true);
+    setError("");
+
+    const response = await fetch(`/api/admin/games/${selectedPlayoffGame.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        homeSource: parseSourceOptionValue(homeSourceValue),
+        awaySource: parseSourceOptionValue(awaySourceValue)
+      })
+    });
+
+    setBusy(false);
+
+    if (!response.ok) {
+      setError("Could not update playoff slot.");
       return;
     }
 
@@ -205,7 +286,8 @@ export function AdminClient({ initialSnapshot }: { initialSnapshot: TournamentSn
               {snapshot.games.map((game) => (
                 <option key={game.id} value={game.id}>
                   {formatShortTime(game.scheduled_start)} · {game.court} ·{" "}
-                  {game.home_team.short_name} vs {game.away_team.short_name}
+                  {participantName(game.home_participant)} vs{" "}
+                  {participantName(game.away_participant)}
                 </option>
               ))}
             </select>
@@ -220,6 +302,72 @@ export function AdminClient({ initialSnapshot }: { initialSnapshot: TournamentSn
                 onUpdate={updateGame}
               />
             </>
+          ) : null}
+
+          {playoffGames.length > 0 ? (
+            <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <div>
+                <h2 className="text-lg font-black text-ink">Playoff slots</h2>
+                <p className="text-sm font-semibold text-slate-500">
+                  Assign teams, group seeds, or winner/loser references.
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                {playoffGames.map((game) => (
+                  <button
+                    key={game.id}
+                    type="button"
+                    onClick={() => setSelectedPlayoffGameId(game.id)}
+                    className={clsx(
+                      "rounded-lg border p-3 text-left",
+                      selectedPlayoffGame?.id === game.id
+                        ? "border-floorbs bg-emerald-50"
+                        : "border-slate-200 bg-slate-50"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-black text-ink">
+                        {formatShortTime(game.scheduled_start)} · {game.title}
+                      </span>
+                      <span className="text-xs font-black uppercase text-slate-500">
+                        {game.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 truncate text-sm font-semibold text-slate-600">
+                      {participantName(game.home_participant)} vs{" "}
+                      {participantName(game.away_participant)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {selectedPlayoffGame ? (
+                <form onSubmit={savePlayoffSlot} className="space-y-3 border-t border-slate-100 pt-3">
+                  <SourceSelect
+                    label="Home"
+                    value={homeSourceValue}
+                    options={sourceOptions}
+                    preview={previewSource(homeSourceValue, snapshot)}
+                    onChange={setHomeSourceValue}
+                  />
+                  <SourceSelect
+                    label="Away"
+                    value={awaySourceValue}
+                    options={sourceOptions}
+                    preview={previewSource(awaySourceValue, snapshot)}
+                    onChange={setAwaySourceValue}
+                  />
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="h-12 w-full rounded-lg bg-floorbs text-sm font-black text-white disabled:bg-slate-300"
+                  >
+                    Save playoff slot
+                  </button>
+                </form>
+              ) : null}
+            </section>
           ) : null}
 
           <form
@@ -298,14 +446,14 @@ function ScoreControls({
       </div>
 
       <ScoreStepper
-        label={game.home_team.name}
+        label={participantName(game.home_participant)}
         score={game.home_score}
         disabled={disabled}
         onMinus={() => onUpdate({ homeScore: Math.max(0, game.home_score - 1) })}
         onPlus={() => onUpdate({ homeScore: game.home_score + 1 })}
       />
       <ScoreStepper
-        label={game.away_team.name}
+        label={participantName(game.away_participant)}
         score={game.away_score}
         disabled={disabled}
         onMinus={() => onUpdate({ awayScore: Math.max(0, game.away_score - 1) })}
@@ -313,6 +461,128 @@ function ScoreControls({
       />
     </div>
   );
+}
+
+function SourceSelect({
+  label,
+  value,
+  options,
+  preview,
+  onChange
+}: {
+  label: string;
+  value: string;
+  options: SourceOption[];
+  preview: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black uppercase text-slate-500">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-ink"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <span className="mt-1 block text-xs font-semibold leading-4 text-slate-500">
+        {preview}
+      </span>
+    </label>
+  );
+}
+
+function buildSourceOptions(
+  snapshot: TournamentSnapshot,
+  selectedGame: Game | null
+): SourceOption[] {
+  const options: SourceOption[] = [{ value: "tbd:", label: "TBD" }];
+
+  for (const team of snapshot.teams) {
+    options.push({
+      value: sourceOptionValue({ type: "team", value: team.id }),
+      label: team.name
+    });
+  }
+
+  for (const [pool, rows] of Object.entries(snapshot.standings)) {
+    rows.forEach((row, index) => {
+      const code = seedCodeForPool(pool, index + 1);
+      options.push({
+        value: sourceOptionValue({ type: "seed", value: code }),
+        label: `${code} · ${row.team.name}`
+      });
+    });
+  }
+
+  if (selectedGame) {
+    const selectedTime = new Date(selectedGame.scheduled_start).getTime();
+    for (const game of snapshot.games) {
+      if (game.phase !== "playoff") continue;
+      if (game.id === selectedGame.id) continue;
+      if (new Date(game.scheduled_start).getTime() >= selectedTime) continue;
+
+      const reference = formatGameReference(game);
+      options.push({
+        value: sourceOptionValue({ type: "winner", value: game.id }),
+        label: `Winner of ${reference}`
+      });
+      options.push({
+        value: sourceOptionValue({ type: "loser", value: game.id }),
+        label: `Loser of ${reference}`
+      });
+    }
+  }
+
+  return options;
+}
+
+function previewSource(value: string, snapshot: TournamentSnapshot) {
+  const source = parseSourceOptionValue(value);
+
+  if (source.type === "tbd") return "No team assigned yet.";
+
+  if (source.type === "team") {
+    return snapshot.teams.find((team) => team.id === source.value)?.name ?? "Team not found.";
+  }
+
+  if (source.type === "seed") {
+    const team = teamForSeed(snapshot.standings, source.value);
+    return team
+      ? `${source.value} -> ${team.name} based on current standings.`
+      : `${source.value} will resolve from standings.`;
+  }
+
+  const game = snapshot.games.find((item) => item.id === source.value);
+  if (!game) return "Referenced game not found.";
+
+  const reference = `${source.type === "winner" ? "Winner" : "Loser"} of ${formatGameReference(game)}`;
+  if (game.status !== "final" || game.home_score === game.away_score) {
+    return `${reference} once that game is final.`;
+  }
+
+  const participant = winnerLoserParticipant(game, source);
+  return participant
+    ? `${reference} -> ${participantName(participant)}`
+    : `${reference} once that game is final.`;
+}
+
+function winnerLoserParticipant(game: Game, source: ParticipantSource) {
+  const homeWon = game.home_score > game.away_score;
+  if (source.type === "winner") {
+    return homeWon ? game.home_participant : game.away_participant;
+  }
+
+  return homeWon ? game.away_participant : game.home_participant;
+}
+
+function participantName(participant: GameParticipant) {
+  return participant.detail ?? participant.label;
 }
 
 function StatusButton({

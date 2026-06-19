@@ -9,326 +9,178 @@ import type {
 
 export const DEMO_TOURNAMENT_ID = "00000000-0000-4000-8000-000000000001";
 
+function demoId(value: number) {
+  return `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
+}
+
+function chicagoTimeToIso(date: string, time: string) {
+  const [hour, minute] = time.split(":").map(Number);
+  return `${date}T${String(hour + 5).padStart(2, "0")}:${String(minute).padStart(
+    2,
+    "0"
+  )}:00.000Z`;
+}
+
 export const demoTournament: Tournament = {
   id: DEMO_TOURNAMENT_ID,
-  name: "Floorbs Cup",
-  location: "Minneapolis, MN",
-  start_date: "2026-06-13",
-  end_date: "2026-06-14",
-  created_at: "2026-05-31T12:00:00.000Z"
+  name: "US Nationals Adult Championship",
+  location: "Blackhawks Ice Center",
+  start_date: "2026-06-19",
+  end_date: "2026-06-21",
+  created_at: "2026-06-18T12:00:00.000Z"
 };
 
-export const demoTeams: Team[] = [
-  {
-    id: "00000000-0000-4000-8000-000000000101",
+const teamSeeds = [
+  ["Austin FBC", "Austin", "Group A"],
+  ["Chi Mad Dogs", "Mad Dogs", "Group A"],
+  ["Mountain West", "Mountain", "Group A"],
+  ["Tomah", "Tomah", "Group A"],
+  ["Chi Hound Dogs", "Hounds", "Group A"],
+  ["Chi Dogs", "Dogs", "Group B"],
+  ["N2FA", "N2FA", "Group B"],
+  ["Minnesota FBC", "MIN FBC", "Group B"],
+  ["Triangle FBC", "Triangle", "Group B"],
+  ["USA MU19", "MU19", "Group C"],
+  ["Richmond FBC", "Richmond", "Group C"],
+  ["Stars", "Stars", "Group C"],
+  ["R. River Dogs", "R. River", "Group C"]
+] as const;
+
+export const demoTeams: Team[] = teamSeeds.map(([name, shortName, pool], index) => ({
+  id: demoId(101 + index),
+  tournament_id: DEMO_TOURNAMENT_ID,
+  name,
+  short_name: shortName,
+  city: null,
+  logo_url: null,
+  pool
+}));
+
+const teamIds = new Map(demoTeams.map((team) => [team.name, team.id]));
+
+function teamId(name: string) {
+  const id = teamIds.get(name);
+  if (!id) throw new Error(`Unknown demo team: ${name}`);
+  return id;
+}
+
+function poolGame(
+  index: number,
+  date: string,
+  time: string,
+  home: string,
+  away: string
+): GameRecord {
+  const homeTeamId = teamId(home);
+  const awayTeamId = teamId(away);
+
+  return {
+    id: demoId(301 + index),
     tournament_id: DEMO_TOURNAMENT_ID,
-    name: "Metro Blades",
-    short_name: "MB",
-    city: "Minneapolis",
-    logo_url: null,
-    pool: "Pool A"
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000102",
+    home_team_id: homeTeamId,
+    away_team_id: awayTeamId,
+    court: "Rink",
+    scheduled_start: chicagoTimeToIso(date, time),
+    phase: "pool",
+    title: "Pool Play",
+    home_source_type: "team",
+    home_source_value: homeTeamId,
+    away_source_type: "team",
+    away_source_value: awayTeamId,
+    status: "scheduled",
+    home_score: 0,
+    away_score: 0
+  };
+}
+
+function playoffGame(index: number, date: string, time: string, title: string): GameRecord {
+  return {
+    id: demoId(323 + index),
     tournament_id: DEMO_TOURNAMENT_ID,
-    name: "North Shore",
-    short_name: "NS",
-    city: "Duluth",
-    logo_url: null,
-    pool: "Pool A"
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000103",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    name: "River City",
-    short_name: "RC",
-    city: "St. Paul",
-    logo_url: null,
-    pool: "Pool A"
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000104",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    name: "Capital Crew",
-    short_name: "CC",
-    city: "Madison",
-    logo_url: null,
-    pool: "Pool A"
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000105",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    name: "Prairie Heat",
-    short_name: "PH",
-    city: "Omaha",
-    logo_url: null,
-    pool: "Pool B"
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000106",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    name: "Harbor United",
-    short_name: "HU",
-    city: "Milwaukee",
-    logo_url: null,
-    pool: "Pool B"
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000107",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    name: "Summit FC",
-    short_name: "SFC",
-    city: "Denver",
-    logo_url: null,
-    pool: "Pool B"
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000108",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    name: "Valley Rush",
-    short_name: "VR",
-    city: "Des Moines",
-    logo_url: null,
-    pool: "Pool B"
-  }
+    home_team_id: null,
+    away_team_id: null,
+    court: "Rink",
+    scheduled_start: chicagoTimeToIso(date, time),
+    phase: "playoff",
+    title,
+    home_source_type: "tbd",
+    home_source_value: null,
+    away_source_type: "tbd",
+    away_source_value: null,
+    status: "scheduled",
+    home_score: 0,
+    away_score: 0
+  };
+}
+
+const poolGames: GameRecord[] = [
+  poolGame(0, "2026-06-19", "07:00", "Austin FBC", "Chi Mad Dogs"),
+  poolGame(1, "2026-06-19", "07:40", "Mountain West", "Tomah"),
+  poolGame(2, "2026-06-19", "08:20", "Minnesota FBC", "Chi Dogs"),
+  poolGame(3, "2026-06-19", "09:00", "Tomah", "Chi Hound Dogs"),
+  poolGame(4, "2026-06-19", "09:40", "Triangle FBC", "N2FA"),
+  poolGame(5, "2026-06-19", "10:20", "USA MU19", "Richmond FBC"),
+  poolGame(6, "2026-06-19", "11:00", "Stars", "R. River Dogs"),
+  poolGame(7, "2026-06-19", "11:40", "Tomah", "Chi Mad Dogs"),
+  poolGame(8, "2026-06-19", "12:20", "Chi Hound Dogs", "Mountain West"),
+  poolGame(9, "2026-06-19", "13:00", "N2FA", "Minnesota FBC"),
+  poolGame(10, "2026-06-19", "13:40", "Chi Hound Dogs", "Austin FBC"),
+  poolGame(11, "2026-06-19", "14:20", "Chi Dogs", "Triangle FBC"),
+  poolGame(12, "2026-06-19", "15:00", "R. River Dogs", "USA MU19"),
+  poolGame(13, "2026-06-19", "15:40", "Richmond FBC", "Stars"),
+  poolGame(14, "2026-06-19", "16:20", "Chi Mad Dogs", "Chi Hound Dogs"),
+  poolGame(15, "2026-06-19", "17:00", "Mountain West", "Austin FBC"),
+  poolGame(16, "2026-06-20", "07:20", "Chi Dogs", "N2FA"),
+  poolGame(17, "2026-06-20", "08:00", "Minnesota FBC", "Triangle FBC"),
+  poolGame(18, "2026-06-20", "08:40", "Richmond FBC", "R. River Dogs"),
+  poolGame(19, "2026-06-20", "09:20", "USA MU19", "Stars"),
+  poolGame(20, "2026-06-20", "10:00", "Austin FBC", "Tomah"),
+  poolGame(21, "2026-06-20", "10:40", "Chi Mad Dogs", "Mountain West")
 ];
 
-export const demoPlayers: Player[] = demoTeams.flatMap((team, teamIndex) => {
-  const base = teamIndex * 3;
-  return [
-    {
-      id: `00000000-0000-4000-8000-${String(200 + base).padStart(12, "0")}`,
-      tournament_id: DEMO_TOURNAMENT_ID,
-      team_id: team.id,
-      name: `${team.short_name} Captain`,
-      jersey_number: 7
-    },
-    {
-      id: `00000000-0000-4000-8000-${String(201 + base).padStart(12, "0")}`,
-      tournament_id: DEMO_TOURNAMENT_ID,
-      team_id: team.id,
-      name: `${team.short_name} Playmaker`,
-      jersey_number: 11
-    },
-    {
-      id: `00000000-0000-4000-8000-${String(202 + base).padStart(12, "0")}`,
-      tournament_id: DEMO_TOURNAMENT_ID,
-      team_id: team.id,
-      name: `${team.short_name} Finisher`,
-      jersey_number: 19
-    }
-  ];
-});
-
-export const demoGames: GameRecord[] = [
-  {
-    id: "00000000-0000-4000-8000-000000000301",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[0].id,
-    away_team_id: demoTeams[1].id,
-    court: "Court 1",
-    scheduled_start: "2026-06-13T14:00:00.000Z",
-    status: "final",
-    home_score: 4,
-    away_score: 2
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000302",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[2].id,
-    away_team_id: demoTeams[3].id,
-    court: "Court 2",
-    scheduled_start: "2026-06-13T14:00:00.000Z",
-    status: "final",
-    home_score: 3,
-    away_score: 3
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000303",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[4].id,
-    away_team_id: demoTeams[5].id,
-    court: "Court 1",
-    scheduled_start: "2026-06-13T15:00:00.000Z",
-    status: "final",
-    home_score: 5,
-    away_score: 1
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000304",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[6].id,
-    away_team_id: demoTeams[7].id,
-    court: "Court 2",
-    scheduled_start: "2026-06-13T15:00:00.000Z",
-    status: "final",
-    home_score: 2,
-    away_score: 4
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000305",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[0].id,
-    away_team_id: demoTeams[2].id,
-    court: "Court 1",
-    scheduled_start: "2026-06-13T16:00:00.000Z",
-    status: "final",
-    home_score: 6,
-    away_score: 4
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000306",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[1].id,
-    away_team_id: demoTeams[3].id,
-    court: "Court 2",
-    scheduled_start: "2026-06-13T16:00:00.000Z",
-    status: "final",
-    home_score: 3,
-    away_score: 1
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000307",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[4].id,
-    away_team_id: demoTeams[6].id,
-    court: "Court 1",
-    scheduled_start: "2026-06-13T17:00:00.000Z",
-    status: "live",
-    home_score: 2,
-    away_score: 2
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000308",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[5].id,
-    away_team_id: demoTeams[7].id,
-    court: "Court 2",
-    scheduled_start: "2026-06-13T17:00:00.000Z",
-    status: "live",
-    home_score: 1,
-    away_score: 3
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000309",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[0].id,
-    away_team_id: demoTeams[3].id,
-    court: "Court 1",
-    scheduled_start: "2026-06-13T18:00:00.000Z",
-    status: "scheduled",
-    home_score: 0,
-    away_score: 0
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000310",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[1].id,
-    away_team_id: demoTeams[2].id,
-    court: "Court 2",
-    scheduled_start: "2026-06-13T18:00:00.000Z",
-    status: "scheduled",
-    home_score: 0,
-    away_score: 0
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000311",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[4].id,
-    away_team_id: demoTeams[7].id,
-    court: "Court 1",
-    scheduled_start: "2026-06-13T19:00:00.000Z",
-    status: "scheduled",
-    home_score: 0,
-    away_score: 0
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000312",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    home_team_id: demoTeams[5].id,
-    away_team_id: demoTeams[6].id,
-    court: "Court 2",
-    scheduled_start: "2026-06-13T19:00:00.000Z",
-    status: "scheduled",
-    home_score: 0,
-    away_score: 0
-  }
+const playoffGames: GameRecord[] = [
+  playoffGame(0, "2026-06-20", "11:20", "Playoff Game"),
+  playoffGame(1, "2026-06-20", "12:00", "Playoff Game"),
+  playoffGame(2, "2026-06-20", "12:40", "Playoff Game"),
+  playoffGame(3, "2026-06-20", "13:20", "Playoff Game"),
+  playoffGame(4, "2026-06-20", "14:00", "Playoff Game"),
+  playoffGame(5, "2026-06-20", "14:40", "Playoff Game"),
+  playoffGame(6, "2026-06-20", "15:20", "Playoff Game"),
+  playoffGame(7, "2026-06-20", "16:00", "Playoff Game"),
+  playoffGame(8, "2026-06-20", "16:40", "Playoff Game"),
+  playoffGame(9, "2026-06-21", "07:20", "Playoff Game"),
+  playoffGame(10, "2026-06-21", "08:00", "Playoff Game"),
+  playoffGame(11, "2026-06-21", "08:40", "Playoff Game"),
+  playoffGame(12, "2026-06-21", "09:20", "Playoff Game"),
+  playoffGame(13, "2026-06-21", "10:00", "Semi Final"),
+  playoffGame(14, "2026-06-21", "10:40", "Semi Final"),
+  playoffGame(15, "2026-06-21", "11:20", "Bronze Medal Game"),
+  playoffGame(16, "2026-06-21", "12:00", "Gold Medal Game")
 ];
+
+export const demoGames: GameRecord[] = [...poolGames, ...playoffGames];
+export const demoPlayers: Player[] = [];
+export const demoLeaders: LeaderRow[] = [];
 
 export const demoFeedPosts: FeedPost[] = [
   {
-    id: "00000000-0000-4000-8000-000000000401",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    game_id: demoGames[7].id,
-    type: "score_update",
-    title: "Valley Rush opens a two-goal lead",
-    body: "Harbor United has time, but Valley Rush is controlling the neutral zone.",
-    created_by: "Demo desk",
-    created_at: "2026-06-13T17:18:00.000Z"
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000402",
-    tournament_id: DEMO_TOURNAMENT_ID,
-    game_id: demoGames[5].id,
-    type: "final_score",
-    title: "Final: North Shore 3, Capital Crew 1",
-    body: "North Shore gets back on track with a clean defensive finish.",
-    created_by: "Demo desk",
-    created_at: "2026-06-13T16:42:00.000Z"
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000403",
+    id: demoId(401),
     tournament_id: DEMO_TOURNAMENT_ID,
     game_id: null,
     type: "announcement",
-    title: "Next block starts at 1:00 PM",
-    body: "Warmups are open on both courts. Captains should check in five minutes before start time.",
+    title: "US Nationals schedule is live",
+    body: "Pool play is loaded for Friday and Saturday morning. Playoff slots will update as seeds are assigned.",
     created_by: "Tournament desk",
-    created_at: "2026-06-13T16:30:00.000Z"
+    created_at: "2026-06-18T18:00:00.000Z"
   },
   {
-    id: "00000000-0000-4000-8000-000000000404",
+    id: demoId(402),
     tournament_id: DEMO_TOURNAMENT_ID,
     game_id: null,
-    type: "smack",
-    title: "Court 1 is loud",
-    body: "Bring the noise for the next block.",
+    type: "announcement",
+    title: "Playoff matchups are editable",
+    body: "Scorers can assign teams, group seeds, or winners from earlier playoff games from the admin page.",
     created_by: "Tournament desk",
-    created_at: "2026-06-13T15:35:00.000Z"
-  }
-];
-
-export const demoLeaders: LeaderRow[] = [
-  {
-    rank: 1,
-    name: "Avery Stone",
-    team: "Metro Blades",
-    goals: 5,
-    assists: 2,
-    points: 7
-  },
-  {
-    rank: 2,
-    name: "Kai Morgan",
-    team: "Valley Rush",
-    goals: 4,
-    assists: 2,
-    points: 6
-  },
-  {
-    rank: 3,
-    name: "Jordan Vale",
-    team: "Prairie Heat",
-    goals: 3,
-    assists: 3,
-    points: 6
-  },
-  {
-    rank: 4,
-    name: "Reese Parker",
-    team: "North Shore",
-    goals: 3,
-    assists: 1,
-    points: 4
+    created_at: "2026-06-18T18:05:00.000Z"
   }
 ];

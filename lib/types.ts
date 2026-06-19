@@ -1,4 +1,11 @@
 export type GameStatus = "scheduled" | "live" | "final";
+export type GamePhase = "pool" | "playoff";
+export type ParticipantSourceType = "tbd" | "team" | "seed" | "winner" | "loser";
+
+export type ParticipantSource = {
+  type: ParticipantSourceType;
+  value: string | null;
+};
 
 export type FeedPostType =
   | "score_update"
@@ -39,10 +46,16 @@ export type Player = {
 export type GameRecord = {
   id: string;
   tournament_id: string;
-  home_team_id: string;
-  away_team_id: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
   court: string;
   scheduled_start: string;
+  phase: GamePhase;
+  title: string;
+  home_source_type: ParticipantSourceType;
+  home_source_value: string | null;
+  away_source_type: ParticipantSourceType;
+  away_source_value: string | null;
   status: GameStatus;
   home_score: number;
   away_score: number;
@@ -50,9 +63,19 @@ export type GameRecord = {
   updated_at?: string;
 };
 
+export type GameParticipant = {
+  label: string;
+  detail: string | null;
+  shortLabel: string;
+  team: Team | null;
+  source: ParticipantSource;
+};
+
 export type Game = GameRecord & {
-  home_team: Team;
-  away_team: Team;
+  home_team: Team | null;
+  away_team: Team | null;
+  home_participant: GameParticipant;
+  away_participant: GameParticipant;
 };
 
 export type FeedPost = {

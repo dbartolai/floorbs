@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { Clock3, MapPin } from "lucide-react";
 import { formatShortTime } from "@/lib/date-format";
-import type { Game } from "@/lib/types";
+import type { Game, GameParticipant } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
 
 export function GameCard({
@@ -27,20 +27,24 @@ export function GameCard({
           <span className="text-slate-300">·</span>
           <MapPin className="h-4 w-4 shrink-0" />
           <span className="truncate">{game.court}</span>
+          {game.phase === "playoff" ? (
+            <>
+              <span className="text-slate-300">·</span>
+              <span className="truncate">{game.title}</span>
+            </>
+          ) : null}
         </div>
         <StatusBadge status={game.status} />
       </div>
 
       <TeamScoreRow
-        name={game.home_team.name}
-        shortName={game.home_team.short_name}
+        participant={game.home_participant}
         score={showScore ? game.home_score : null}
         compact={compact}
       />
       <div className="my-2 h-px bg-slate-100" />
       <TeamScoreRow
-        name={game.away_team.name}
-        shortName={game.away_team.short_name}
+        participant={game.away_participant}
         score={showScore ? game.away_score : null}
         compact={compact}
       />
@@ -49,13 +53,11 @@ export function GameCard({
 }
 
 function TeamScoreRow({
-  name,
-  shortName,
+  participant,
   score,
   compact
 }: {
-  name: string;
-  shortName: string;
+  participant: GameParticipant;
   score: number | null;
   compact: boolean;
 }) {
@@ -63,16 +65,23 @@ function TeamScoreRow({
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-slate-700">
-          {shortName}
+          {participant.shortLabel}
         </div>
-        <span
-          className={clsx(
-            "truncate font-black text-ink",
-            compact ? "text-base" : "text-lg"
-          )}
-        >
-          {name}
-        </span>
+        <div className="min-w-0">
+          <div
+            className={clsx(
+              "truncate font-black text-ink",
+              compact ? "text-base" : "text-lg"
+            )}
+          >
+            {participant.label}
+          </div>
+          {participant.detail ? (
+            <div className="truncate text-xs font-bold text-slate-500">
+              {participant.detail}
+            </div>
+          ) : null}
+        </div>
       </div>
       <span
         className={clsx(
