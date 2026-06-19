@@ -1,3 +1,5 @@
+export const TOURNAMENT_TIME_ZONE = "America/Chicago";
+
 export function formatDateRange(startDate: string, endDate: string) {
   const start = parseCalendarDate(startDate);
   const end = parseCalendarDate(endDate);
@@ -15,6 +17,7 @@ export function formatDateRange(startDate: string, endDate: string) {
 
 export function formatGameTime(date: string) {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: TOURNAMENT_TIME_ZONE,
     weekday: "short",
     hour: "numeric",
     minute: "2-digit"
@@ -23,6 +26,7 @@ export function formatGameTime(date: string) {
 
 export function formatShortTime(date: string) {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: TOURNAMENT_TIME_ZONE,
     hour: "numeric",
     minute: "2-digit"
   }).format(new Date(date));
@@ -30,6 +34,7 @@ export function formatShortTime(date: string) {
 
 export function formatDay(date: string) {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: TOURNAMENT_TIME_ZONE,
     weekday: "long",
     month: "short",
     day: "numeric"

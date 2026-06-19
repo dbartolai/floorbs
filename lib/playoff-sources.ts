@@ -1,3 +1,4 @@
+import { formatGameTime } from "@/lib/date-format";
 import type {
   GameRecord,
   ParticipantSource,
@@ -73,11 +74,5 @@ export function teamForSeed(
 }
 
 export function formatGameReference(game: Pick<GameRecord, "scheduled_start" | "title">) {
-  const time = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(new Date(game.scheduled_start));
-
-  return `${time} ${game.title}`;
+  return `${formatGameTime(game.scheduled_start)} ${game.title}`;
 }

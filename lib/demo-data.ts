@@ -31,19 +31,19 @@ export const demoTournament: Tournament = {
 };
 
 const teamSeeds = [
-  ["Austin FBC", "Austin", "Group A"],
-  ["Chi Mad Dogs", "Mad Dogs", "Group A"],
-  ["Mountain West", "Mountain", "Group A"],
-  ["Tomah", "Tomah", "Group A"],
-  ["Chi Hound Dogs", "Hounds", "Group A"],
-  ["Chi Dogs", "Dogs", "Group B"],
+  ["Austin FBC", "AUS", "Group A"],
+  ["Chi Mad Dogs", "CMD", "Group A"],
+  ["Mountain West", "MW", "Group A"],
+  ["Tomah", "TOM", "Group A"],
+  ["Chi Hound Dogs", "CHD", "Group A"],
+  ["Chi Dogs", "CD", "Group B"],
   ["N2FA", "N2FA", "Group B"],
-  ["Minnesota FBC", "MIN FBC", "Group B"],
-  ["Triangle FBC", "Triangle", "Group B"],
-  ["USA MU19", "MU19", "Group C"],
-  ["Richmond FBC", "Richmond", "Group C"],
-  ["Stars", "Stars", "Group C"],
-  ["R. River Dogs", "R. River", "Group C"]
+  ["Minnesota FBC", "MIN", "Group B"],
+  ["Triangle FBC", "TRI", "Group B"],
+  ["USA MU19", "U19", "Group C"],
+  ["Richmond FBC", "RIC", "Group C"],
+  ["Stars", "STR", "Group C"],
+  ["R. River Dogs", "RRD", "Group C"]
 ] as const;
 
 export const demoTeams: Team[] = teamSeeds.map(([name, shortName, pool], index) => ({
